@@ -1,6 +1,6 @@
 // функції для відображення елементів інтерфейсу
 export default function renderGallery(array, element, loader) {
-  const galleryMarkup = array.hits
+  const galleryMarkup = array
     .map(
       ({
         webformatURL,

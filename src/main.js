@@ -1,4 +1,5 @@
 // imports
+
 import getPictures from './js/pixabay-api';
 import renderGallery from './js/render-function';
 
@@ -13,71 +14,127 @@ import 'simplelightbox/dist/simple-lightbox.min.css';
 const searchForm = document.querySelector('.form');
 const gallery = document.querySelector('.gallery-list');
 const loader = document.querySelector('.loader');
+const btnLoadMore = document.querySelector('.btn.load-more');
 const lightbox = new SimpleLightbox('.gallery-list a', {
   captionsData: 'alt',
   captionDelay: 250,
 });
 
-// search pictures
-searchForm.addEventListener('submit', handleSearch);
+const perPage = 15;
+let page;
+let searchTag;
+let maxHits;
 
-function handleSearch(e) {
+// search pictures
+searchForm.addEventListener('submit', handleSearchPictures);
+
+async function handleSearchPictures(e) {
   e.preventDefault();
 
   clearGallery();
+  hideBtnLoadMore();
 
   const form = e.target;
-  const searchTag = form.elements.tag.value.trim();
+  searchTag = form.elements.tag.value.trim();
 
   if (searchTag === '') {
-    iziToast.show({
-      message: 'Sorry, enter the tag',
-      messageColor: '#fafafb',
-      messageSize: '16px',
-
-      iconUrl: errorIcon,
-
-      position: 'topRight',
-      backgroundColor: '#ef4040',
-    });
-
+    showMessage('Sorry, enter the tag', '#ef4040', errorIcon);
     return;
   }
 
+  page = 1;
+
   showLoader();
 
-  getPictures(searchTag)
-    .then(res => {
-      if (res.hits.length === 0) {
-        hideLoader();
+  try {
+    const { hits, totalHits } = await getPictures(searchTag, page, perPage);
+    if (hits.length === 0) {
+      hideLoader();
+      showMessage(
+        'Sorry, there are no images matching your search query. Please try again!',
+        '#ef4040',
+        errorIcon
+      );
+      searchForm.reset();
+      return;
+    }
 
-        iziToast.show({
-          message:
-            'Sorry, there are no images matching your search query. Please try again!',
-          messageColor: '#fafafb',
-          messageSize: '16px',
+    maxHits = totalHits;
 
-          iconUrl: errorIcon,
+    renderGallery(hits, gallery, loader);
+    showBtnLoadMore();
+    lightbox.refresh();
+  } catch (error) {
+    hideLoader();
 
-          position: 'topRight',
-          backgroundColor: '#ef4040',
-        });
-      } else {
-        renderGallery(res, gallery, loader);
-
-        lightbox.refresh();
-      }
-    })
-    .catch(err => err);
+    showMessage('Oops. Something went wrong', '#ef4040', errorIcon);
+  }
 
   searchForm.reset();
 }
 
+// event on btn "load more"
+btnLoadMore.addEventListener('click', handleShowMorePictires);
+async function handleShowMorePictires() {
+  showLoader();
+  page += 1;
+
+  try {
+    const { hits, totalHits } = await getPictures(searchTag, page, perPage);
+    maxHits = totalHits;
+
+    if (page * perPage >= maxHits) {
+      hideBtnLoadMore();
+      showMessage(
+        "We're sorry, but you've reached the end of search results.",
+        '#34c6eb'
+      );
+    }
+    hideLoader();
+
+    renderGallery(hits, gallery, loader);
+    lightbox.refresh();
+
+    smoothScrolling();
+  } catch (error) {
+    hideLoader();
+
+    showMessage('Oops. Something went wrong', '#ef4040', errorIcon);
+  }
+}
+
+// event on gallery
+gallery.addEventListener('click', handleLinkClick);
+
+function handleLinkClick(event) {
+  if (event.target.nodeName !== 'IMG') {
+    return;
+  }
+}
+
+// ================= functions
+
+// ================= message by iziToast
+function showMessage(text, color, icon = '') {
+  iziToast.show({
+    message: text,
+    messageColor: '#fafafb',
+    messageSize: '16px',
+
+    iconUrl: icon,
+
+    position: 'topRight',
+    backgroundColor: color,
+  });
+}
+
+// ================= delete gallery's elements
 function clearGallery() {
   gallery.innerHTML = '';
   gallery.classList.add('hidden');
 }
 
+// ================= visibility of loader
 function showLoader() {
   loader.classList.remove('hidden');
 }
@@ -85,12 +142,22 @@ function hideLoader() {
   loader.classList.add('hidden');
 }
 
-// event on gallery
-gallery.addEventListener('click', handleLinkClick);
+// ================= visibility of button "Load more"
+function showBtnLoadMore() {
+  btnLoadMore.classList.remove('hidden');
+}
+function hideBtnLoadMore() {
+  btnLoadMore.classList.add('hidden');
+}
 
-function handleLinkClick(event) {
-  // event.preventDefault();
-  if (event.target.nodeName !== 'IMG') {
-    return;
-  }
+// ================= smooth scrolling of window after add more gallery's items
+function smoothScrolling() {
+  const { height } = document
+    .querySelector('.gallery-item')
+    .getBoundingClientRect();
+
+  window.scrollBy({
+    top: height * 2,
+    behavior: 'smooth',
+  });
 }
