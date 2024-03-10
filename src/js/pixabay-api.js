@@ -16,6 +16,5 @@ export default async function getPictures(name, page, perPage) {
   });
 
   const { data } = await axios.get(`${BASE_URL}?${searchParams}`);
-
   return data;
 }

@@ -62,7 +62,11 @@ async function handleSearchPictures(e) {
     maxHits = totalHits;
 
     renderGallery(hits, gallery, loader);
-    showBtnLoadMore();
+
+    if (totalHits > perPage) {
+      showBtnLoadMore();
+    }
+
     lightbox.refresh();
   } catch (error) {
     hideLoader();
@@ -100,15 +104,6 @@ async function handleShowMorePictires() {
     hideLoader();
 
     showMessage('Oops. Something went wrong', '#ef4040', errorIcon);
-  }
-}
-
-// event on gallery
-gallery.addEventListener('click', handleLinkClick);
-
-function handleLinkClick(event) {
-  if (event.target.nodeName !== 'IMG') {
-    return;
   }
 }
 
